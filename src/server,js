@@ -10,46 +10,169 @@ const { renderImssPdf }            = require("./renderers/imssPdfRenderer");
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Tu API key de Nubarium ────────────────────────────────────────────────────
+// ── Config ───────────────────────────────────────────────────────────────────
 const NUBARIUM_API_KEY = process.env.NUBARIUM_API_KEY || "TU_API_KEY_AQUI";
+const MY_PUBLIC_URL    = process.env.MY_PUBLIC_URL || "https://tu-servidor.com";
 
-// ── URL pública de tu servidor (donde Nubarium hará el callback) ──────────────
-const MY_PUBLIC_URL = process.env.MY_PUBLIC_URL || "https://tu-servidor.com";
-
-// ── Directorio donde se guardan los PDFs generados ───────────────────────────
 const OUTPUT_DIR = path.join(__dirname, "../output");
+const PUBLIC_DIR = path.join(__dirname, "../public");
+
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+// ── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
+app.use(express.static(PUBLIC_DIR));
+
+// ── "Base de datos" temporal en memoria ─────────────────────────────────────
+// Luego esto lo pasas a JSON o DB real
+let consultas = [
+  {
+    id: 1,
+    nombre: "FLORES GARZA AMARO",
+    curp: "FOGA741213HDFMML00",
+    nss: "98923404899",
+    fecha: "24/03/2026",
+    estado: "ok",
+    archivo: "imss_historial_laboral.pdf",
+    owner: "cliente",
+    requestId: null
+  }
+];
+
+function fechaHoyMX() {
+  return new Date().toLocaleDateString("es-MX");
+}
+
+function authFromToken(req) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.replace("Bearer ", "").trim();
+
+  if (token === "admin-token-demo") {
+    return { username: "admin", role: "admin" };
+  }
+
+  if (token === "cliente-token-demo") {
+    return { username: "cliente", role: "cliente" };
+  }
+
+  return null;
+}
+
+function requireAuth(req, res, next) {
+  const user = authFromToken(req);
+  if (!user) {
+    return res.status(401).json({ error: "No autorizado" });
+  }
+  req.user = user;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  const user = authFromToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Acceso solo para administradores" });
+  }
+  req.user = user;
+  next();
+}
+
+// ── Frontend ─────────────────────────────────────────────────────────────────
+app.get("/", (req, res) => {
+  res.sendFile(path.join(PUBLIC_DIR, "login.html"));
+});
+
+// ── Login demo por roles ─────────────────────────────────────────────────────
+app.post("/login", (req, res) => {
+  const { username, password } = req.body;
+
+  if (username === "admin" && password === "1234") {
+    return res.json({
+      token: "admin-token-demo",
+      role: "admin"
+    });
+  }
+
+  if (username === "cliente" && password === "1234") {
+    return res.json({
+      token: "cliente-token-demo",
+      role: "cliente"
+    });
+  }
+
+  return res.status(401).json({ error: "Credenciales incorrectas" });
+});
+
+// ── Admin: ver todas las consultas ───────────────────────────────────────────
+app.get("/consultas", requireAdmin, (req, res) => {
+  return res.json(consultas);
+});
+
+// ── Cliente: ver solo sus consultas ──────────────────────────────────────────
+app.get("/mis-consultas", requireAuth, (req, res) => {
+  const propias = consultas.filter(c => c.owner === req.user.username);
+
+  return res.json({
+    credits: 18,
+    consultas: propias
+  });
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /generar-historial
-// El cliente llama aquí con la CURP para iniciar el proceso
-// Body: { "curp": "XXXX741213HDFMML00" }
+// Body: { "curp": "...", "nombre": "..." }
 // ─────────────────────────────────────────────────────────────────────────────
-app.post("/generar-historial", async (req, res) => {
-  const { curp } = req.body;
+app.post("/generar-historial", requireAuth, async (req, res) => {
+  const { curp, nombre } = req.body;
 
   if (!curp) {
     return res.status(400).json({ error: "El campo 'curp' es obligatorio" });
   }
 
+  if (String(curp).trim().length !== 18) {
+    return res.status(400).json({ error: "La CURP debe tener 18 caracteres" });
+  }
+
+  const curpUpper = String(curp).trim().toUpperCase();
+
+  // Creamos registro local en pending antes de mandar a Nubarium
+  const consultaLocal = {
+    id: Date.now(),
+    nombre: (nombre || "SIN NOMBRE").toUpperCase(),
+    curp: curpUpper,
+    nss: "—",
+    fecha: fechaHoyMX(),
+    estado: "pending",
+    archivo: null,
+    owner: req.user.username,
+    requestId: null
+  };
+
+  consultas.unshift(consultaLocal);
+
   try {
-    // Llamada a Nubarium — le decimos que nos haga callback en /webhook/nubarium
-    await axios.post(
+    const nubariumRes = await axios.post(
       "https://api.nubarium.com/mex/plus/v2/imss-job-history",
       {
-        curp,
+        curp: curpUpper,
         url: `${MY_PUBLIC_URL}/webhook/nubarium`,
-        encabezados: { curp } // re-enviamos la curp para identificar en el webhook
+        encabezados: {
+          curp: curpUpper,
+          owner: req.user.username,
+          localId: consultaLocal.id
+        }
       },
       {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${NUBARIUM_API_KEY}`
+          Authorization: `Bearer ${NUBARIUM_API_KEY}`
         }
       }
     );
+
+    // Si Nubarium devuelve algún identificador, lo guardamos
+    if (nubariumRes?.data?.id) {
+      consultaLocal.requestId = nubariumRes.data.id;
+    }
 
     return res.json({
       ok: true,
@@ -57,8 +180,13 @@ app.post("/generar-historial", async (req, res) => {
     });
 
   } catch (error) {
+    consultaLocal.estado = "error";
+
     console.error("❌ Error al llamar a Nubarium:", error.message);
-    return res.status(500).json({ error: "Error al conectar con Nubarium" });
+
+    return res.status(500).json({
+      error: "Error al conectar con Nubarium"
+    });
   }
 });
 
@@ -69,19 +197,33 @@ app.post("/generar-historial", async (req, res) => {
 app.post("/webhook/nubarium", async (req, res) => {
   const rawPayload = req.body;
 
-  // Siempre responder 200 rápido a Nubarium para que no reintente
+  // responder rápido
   res.status(200).json({ ok: true });
 
   try {
     if (rawPayload.status !== "OK") {
       console.error("⚠️ Nubarium devolvió error:", rawPayload.message);
+
+      // Intentamos marcar error si encontramos la consulta
+      const curpFromHeader = rawPayload?.encabezados?.curp || rawPayload?.curp;
+      const ownerFromHeader = rawPayload?.encabezados?.owner;
+
+      const consultaError = consultas.find(c =>
+        c.curp === curpFromHeader &&
+        (!ownerFromHeader || c.owner === ownerFromHeader) &&
+        c.estado === "pending"
+      );
+
+      if (consultaError) {
+        consultaError.estado = "error";
+      }
+
       return;
     }
 
     const normalized = normalizeNubariumPremium(rawPayload);
     const viewModel  = buildImssViewModel(normalized);
 
-    // Nombre del archivo basado en NSS o CURP
     const fileName   = `imss_${viewModel.nss || "historial"}_${Date.now()}.pdf`;
     const outputPath = path.join(OUTPUT_DIR, fileName);
 
@@ -91,10 +233,44 @@ app.post("/webhook/nubarium", async (req, res) => {
     console.log(`👤 Nombre: ${viewModel.fullName}`);
     console.log(`📦 Empleos: ${viewModel.jobs.length}`);
 
-    // Aquí puedes agregar lógica adicional:
-    // - Notificar al cliente por email
-    // - Guardar en base de datos
-    // - Llamar a otro webhook con la URL del PDF
+    // Intentamos encontrar la consulta local para actualizarla
+    const curpFromHeader  = rawPayload?.encabezados?.curp || viewModel?.curp || rawPayload?.curp;
+    const ownerFromHeader = rawPayload?.encabezados?.owner;
+    const localIdFromHeader = Number(rawPayload?.encabezados?.localId);
+
+    let consulta = null;
+
+    if (localIdFromHeader) {
+      consulta = consultas.find(c => c.id === localIdFromHeader);
+    }
+
+    if (!consulta && curpFromHeader) {
+      consulta = consultas.find(c =>
+        c.curp === curpFromHeader &&
+        (!ownerFromHeader || c.owner === ownerFromHeader) &&
+        c.estado === "pending"
+      );
+    }
+
+    if (consulta) {
+      consulta.estado = "ok";
+      consulta.archivo = fileName;
+      consulta.nss = viewModel.nss || "—";
+      consulta.nombre = viewModel.fullName || consulta.nombre;
+    } else {
+      // fallback: si no existe la consulta, la registramos para no perder trazabilidad
+      consultas.unshift({
+        id: Date.now(),
+        nombre: viewModel.fullName || "SIN NOMBRE",
+        curp: curpFromHeader || "—",
+        nss: viewModel.nss || "—",
+        fecha: fechaHoyMX(),
+        estado: "ok",
+        archivo: fileName,
+        owner: ownerFromHeader || "cliente",
+        requestId: null
+      });
+    }
 
   } catch (error) {
     console.error("❌ Error al generar PDF:", error.message);
@@ -103,8 +279,6 @@ app.post("/webhook/nubarium", async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /pdf/:archivo
-// Descarga el PDF generado
-// Ejemplo: GET /pdf/imss_98923404899_1234567890.pdf
 // ─────────────────────────────────────────────────────────────────────────────
 app.get("/pdf/:archivo", (req, res) => {
   const filePath = path.join(OUTPUT_DIR, req.params.archivo);

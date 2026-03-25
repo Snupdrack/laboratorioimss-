@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SynkData — Admin IMSS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0e1a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: #0d1117;
+      border-bottom: 0.5px solid #1e2d3d;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 600;
+      color: #00d4ff;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00d4ff;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .admin-label {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1a2744;
+      border: 1px solid #00d4ff44;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #00d4ff;
+    }
+
+    .btn-top {
+      background: transparent;
+      border: 0.5px solid #1e2d3d;
+      color: #94a3b8;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .btn-top:hover {
+      border-color: #00d4ff44;
+      color: #00d4ff;
+    }
+
+    .main { display: flex; flex: 1; }
+
+    .sidebar {
+      width: 220px;
+      background: #0d1117;
+      border-right: 0.5px solid #1e2d3d;
+      padding: 20px 0;
+      flex-shrink: 0;
+      position: sticky;
+      top: 56px;
+      height: calc(100vh - 56px);
+      overflow-y: auto;
+    }
+
+    .nav-section {
+      font-size: 10px;
+      color: #334155;
+      padding: 16px 20px 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      font-size: 13px;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 2px solid transparent;
+    }
+
+    .nav-item.active {
+      color: #00d4ff;
+      background: #00d4ff11;
+      border-left-color: #00d4ff;
+    }
+
+    .nav-item:hover:not(.active) {
+      color: #94a3b8;
+      background: #ffffff08;
+    }
+
+    .content {
+      flex: 1;
+      padding: 28px;
+      overflow: auto;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-bottom: 4px;
+    }
+
+    .page-sub {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 24px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #0d1117;
+      border: 0.5px solid #1e2d3d;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .stat-label { font-size: 12px; color: #64748b; margin-bottom: 6px; }
+    .stat-value { font-size: 24px; font-weight: 600; color: #e2e8f0; }
+    .stat-value.cyan { color: #00d4ff; }
+    .stat-value.amber { color: #f59e0b; }
+    .stat-value.red { color: #ef4444; }
+
+    .panel {
+      background: #0d1117;
+      border: 0.5px solid #1e2d3d;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 0.5px solid #1e2d3d;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+
+    .new-query-form { padding: 20px; }
+
+    .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .form-label { font-size: 12px; color: #64748b; }
+
+    .form-input {
+      background: #0a0e1a;
+      border: 0.5px solid #1e2d3d;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: #e2e8f0;
+      outline: none;
+    }
+
+    .form-input:focus { border-color: #00d4ff55; }
+    .form-input::placeholder { color: #334155; }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      font-weight: 500;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: #00d4ff;
+      color: #0a0e1a;
+    }
+
+    .btn-primary:hover { background: #22deff; }
+
+    .btn-ghost {
+      background: transparent;
+      border: 0.5px solid #1e2d3d;
+      color: #94a3b8;
+    }
+
+    .btn-ghost:hover {
+      border-color: #00d4ff44;
+      color: #00d4ff;
+    }
+
+    .query-msg {
+      margin-top: 12px;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .query-msg.success {
+      background: #001f2e;
+      border: 0.5px solid #00d4ff44;
+      color: #00d4ff;
+    }
+
+    .query-msg.error {
+      background: #1f0808;
+      border: 0.5px solid #ef444444;
+      color: #ef4444;
+    }
+
+    .search-row {
+      padding: 14px 20px;
+      border-bottom: 0.5px solid #1e2d3d;
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-input {
+      flex: 1;
+      background: #0a0e1a;
+      border: 0.5px solid #1e2d3d;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #e2e8f0;
+      outline: none;
+    }
+
+    .search-input:focus { border-color: #00d4ff55; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      font-size: 11px;
+      color: #475569;
+      font-weight: 500;
+      text-align: left;
+      padding: 10px 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      border-bottom: 0.5px solid #1e2d3d;
+      white-space: nowrap;
+    }
+
+    td {
+      font-size: 13px;
+      color: #94a3b8;
+      padding: 12px 20px;
+      border-bottom: 0.5px solid #0f1623;
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #ffffff03; }
+
+    .td-name { color: #e2e8f0; font-weight: 500; }
+    .td-mono { font-family: 'Courier New', monospace; font-size: 12px; color: #475569; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .badge-ok { background: #052e16; color: #22c55e; }
+    .badge-pending { background: #1c1407; color: #f59e0b; }
+    .badge-error { background: #1f0808; color: #ef4444; }
+
+    .btn-download {
+      background: #00d4ff15;
+      border: 0.5px solid #00d4ff44;
+      color: #00d4ff;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-download:hover { background: #00d4ff25; }
+
+    .empty-row td {
+      text-align: center;
+      color: #334155;
+      padding: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">
+      SynkData
+      <div class="logo-dot"></div>
+    </div>
+
+    <div class="topbar-right">
+      <span class="admin-label">Panel de administrador</span>
+      <div class="avatar">AD</div>
+      <button class="btn-top" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="nav-section">Principal</div>
+      <div class="nav-item active">Dashboard</div>
+      <div class="nav-item">Clientes</div>
+
+      <div class="nav-section">IMSS</div>
+      <div class="nav-item">Historial laboral</div>
+      <div class="nav-item">PDFs generados</div>
+
+      <div class="nav-section">Sistema</div>
+      <div class="nav-item">Configuración</div>
+    </div>
+
+    <div class="content">
+      <div class="page-title">Historial laboral IMSS</div>
+      <div class="page-sub">Vista general del sistema y consultas de todos los clientes</div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total consultas</div>
+          <div class="stat-value cyan" id="stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">PDFs generados</div>
+          <div class="stat-value" id="stat-ok">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">En proceso</div>
+          <div class="stat-value amber" id="stat-pending">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Errores</div>
+          <div class="stat-value red" id="stat-error">0</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Nueva consulta</div>
+        </div>
+
+        <div class="new-query-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">CURP del cliente *</label>
+              <input class="form-input" id="curp-input" placeholder="XXXX741213HDFMML00" maxlength="18" style="text-transform: uppercase; font-family: 'Courier New', monospace;" />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Nombre del cliente</label>
+              <input class="form-input" id="name-input" placeholder="Nombre completo" />
+            </div>
+
+            <button class="btn btn-primary" onclick="enviarConsulta()">Consultar IMSS</button>
+          </div>
+
+          <div class="query-msg" id="query-msg"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Historial de consultas</div>
+          <button class="btn btn-ghost" onclick="exportarCSV()">Exportar CSV</button>
+        </div>
+
+        <div class="search-row">
+          <input class="search-input" id="search-box" placeholder="Buscar por nombre, CURP o NSS..." oninput="filtrar()" />
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>CURP</th>
+                <th>NSS</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>PDF</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let consultas = [];
+
+    function validarAcceso() {
+      const role = localStorage.getItem("role");
+      if (role !== "admin") {
+        window.location.href = "/login.html";
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "/login.html";
+    }
+
+    function fechaHoy() {
+      const d = new Date();
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+
+    function badgeHTML(estado) {
+      const map = {
+        ok: '<span class="badge badge-ok">Completado</span>',
+        pending: '<span class="badge badge-pending">En proceso</span>',
+        error: '<span class="badge badge-error">Error</span>'
+      };
+      return map[estado] || "";
+    }
+
+    function actualizarStats() {
+      document.getElementById("stat-total").textContent = consultas.length;
+      document.getElementById("stat-ok").textContent = consultas.filter(c => c.estado === "ok").length;
+      document.getElementById("stat-pending").textContent = consultas.filter(c => c.estado === "pending").length;
+      document.getElementById("stat-error").textContent = consultas.filter(c => c.estado === "error").length;
+    }
+
+    function renderTabla(data) {
+      const tbody = document.getElementById("table-body");
+
+      if (!data.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No hay consultas registradas</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(c => `
+        <tr>
+          <td class="td-name">${c.nombre || "Sin nombre"}</td>
+          <td class="td-mono">${c.curp || "—"}</td>
+          <td class="td-mono">${c.nss || "—"}</td>
+          <td>${c.fecha || "—"}</td>
+          <td>${badgeHTML(c.estado)}</td>
+          <td>
+            ${c.archivo
+              ? `<button class="btn-download" onclick="descargarPdf('${c.archivo}')">Descargar PDF</button>`
+              : `<span style="color:#334155; font-size:12px;">—</span>`
+            }
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function filtrar() {
+      const q = document.getElementById("search-box").value.toLowerCase();
+      const filtrados = consultas.filter(c =>
+        (c.nombre || "").toLowerCase().includes(q) ||
+        (c.curp || "").toLowerCase().includes(q) ||
+        (c.nss || "").toLowerCase().includes(q)
+      );
+      renderTabla(filtrados);
+    }
+
+    function mostrarMsg(tipo, texto) {
+      const msg = document.getElementById("query-msg");
+      msg.className = `query-msg ${tipo}`;
+      msg.textContent = texto;
+      msg.style.display = "block";
+    }
+
+    async function cargarConsultas() {
+      try {
+        const res = await fetch(`${API_BASE}/consultas`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`
+          }
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "No se pudieron cargar las consultas");
+
+        consultas = data;
+        renderTabla(consultas);
+        actualizarStats();
+      } catch (err) {
+        mostrarMsg("error", err.message);
+      }
+    }
+
+    async function enviarConsulta() {
+      const curp = document.getElementById("curp-input").value.trim().toUpperCase();
+      const nombre = document.getElementById("name-input").value.trim();
+
+      if (curp.length !== 18) {
+        mostrarMsg("error", "La CURP debe tener exactamente 18 caracteres.");
+        return;
+      }
+
+      mostrarMsg("success", "Enviando solicitud al servidor...");
+
+      try {
+        const res = await fetch(`${API_BASE}/generar-historial`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token") || ""}`
+          },
+          body: JSON.stringify({ curp, nombre })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error al generar consulta");
+
+        document.getElementById("curp-input").value = "";
+        document.getElementById("name-input").value = "";
+
+        mostrarMsg("success", "Consulta enviada correctamente.");
+        await cargarConsultas();
+      } catch (err) {
+        mostrarMsg("error", err.message);
+      }
+    }
+
+    function descargarPdf(archivo) {
+      window.open(`${API_BASE}/pdf/${archivo}`, "_blank");
+    }
+
+    function exportarCSV() {
+      const headers = ["Nombre", "CURP", "NSS", "Fecha", "Estado", "Archivo"];
+      const rows = consultas.map(c => [
+        c.nombre || "",
+        c.curp || "",
+        c.nss || "",
+        c.fecha || "",
+        c.estado || "",
+        c.archivo || ""
+      ].join(","));
+
+      const csv = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `consultas_admin_${fechaHoy().replace(/\//g, "-")}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    validarAcceso();
+    cargarConsultas();
+  </script>
+</body>
+</html>
