@@ -1,0 +1,125 @@
+const express = require("express");
+const axios   = require("axios");
+const path    = require("path");
+const fs      = require("fs");
+
+const { normalizeNubariumPremium } = require("./normalizers/nubariumPremium");
+const { buildImssViewModel }       = require("./formatters/imssViewModel");
+const { renderImssPdf }            = require("./renderers/imssPdfRenderer");
+
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
+// ── Tu API key de Nubarium ────────────────────────────────────────────────────
+const NUBARIUM_API_KEY = process.env.NUBARIUM_API_KEY || "TU_API_KEY_AQUI";
+
+// ── URL pública de tu servidor (donde Nubarium hará el callback) ──────────────
+const MY_PUBLIC_URL = process.env.MY_PUBLIC_URL || "https://tu-servidor.com";
+
+// ── Directorio donde se guardan los PDFs generados ───────────────────────────
+const OUTPUT_DIR = path.join(__dirname, "../output");
+if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+app.use(express.json());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /generar-historial
+// El cliente llama aquí con la CURP para iniciar el proceso
+// Body: { "curp": "XXXX741213HDFMML00" }
+// ─────────────────────────────────────────────────────────────────────────────
+app.post("/generar-historial", async (req, res) => {
+  const { curp } = req.body;
+
+  if (!curp) {
+    return res.status(400).json({ error: "El campo 'curp' es obligatorio" });
+  }
+
+  try {
+    // Llamada a Nubarium — le decimos que nos haga callback en /webhook/nubarium
+    await axios.post(
+      "https://api.nubarium.com/mex/plus/v2/imss-job-history",
+      {
+        curp,
+        url: `${MY_PUBLIC_URL}/webhook/nubarium`,
+        encabezados: { curp } // re-enviamos la curp para identificar en el webhook
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${NUBARIUM_API_KEY}`
+        }
+      }
+    );
+
+    return res.json({
+      ok: true,
+      message: "Solicitud enviada a Nubarium. El PDF se generará cuando llegue la respuesta."
+    });
+
+  } catch (error) {
+    console.error("❌ Error al llamar a Nubarium:", error.message);
+    return res.status(500).json({ error: "Error al conectar con Nubarium" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /webhook/nubarium
+// Nubarium llama aquí con el JSON del historial laboral
+// ─────────────────────────────────────────────────────────────────────────────
+app.post("/webhook/nubarium", async (req, res) => {
+  const rawPayload = req.body;
+
+  // Siempre responder 200 rápido a Nubarium para que no reintente
+  res.status(200).json({ ok: true });
+
+  try {
+    if (rawPayload.status !== "OK") {
+      console.error("⚠️ Nubarium devolvió error:", rawPayload.message);
+      return;
+    }
+
+    const normalized = normalizeNubariumPremium(rawPayload);
+    const viewModel  = buildImssViewModel(normalized);
+
+    // Nombre del archivo basado en NSS o CURP
+    const fileName   = `imss_${viewModel.nss || "historial"}_${Date.now()}.pdf`;
+    const outputPath = path.join(OUTPUT_DIR, fileName);
+
+    renderImssPdf(viewModel, outputPath);
+
+    console.log(`✅ PDF generado: ${fileName}`);
+    console.log(`👤 Nombre: ${viewModel.fullName}`);
+    console.log(`📦 Empleos: ${viewModel.jobs.length}`);
+
+    // Aquí puedes agregar lógica adicional:
+    // - Notificar al cliente por email
+    // - Guardar en base de datos
+    // - Llamar a otro webhook con la URL del PDF
+
+  } catch (error) {
+    console.error("❌ Error al generar PDF:", error.message);
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /pdf/:archivo
+// Descarga el PDF generado
+// Ejemplo: GET /pdf/imss_98923404899_1234567890.pdf
+// ─────────────────────────────────────────────────────────────────────────────
+app.get("/pdf/:archivo", (req, res) => {
+  const filePath = path.join(OUTPUT_DIR, req.params.archivo);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "PDF no encontrado" });
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${req.params.archivo}"`);
+  fs.createReadStream(filePath).pipe(res);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`📡 Webhook URL: ${MY_PUBLIC_URL}/webhook/nubarium`);
+});
