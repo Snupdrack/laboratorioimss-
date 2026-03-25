@@ -1,0 +1,185 @@
+{
+  "status": "OK",
+  "messageCode": 0,
+  "message": "The request to retrieve information from IMSS was successful",
+  "data": {
+    "nombre": "FLORES GARZA AMARO",
+    "curp": "FOGA741213HDFMML00",
+    "nss": "98923404899",
+    "semanasCotizadas": {
+      "semanasCotizadas": "1190",
+      "semanasDescontadas": "439",
+      "semanasReintegradas": "0"
+    },
+    "historialLaboral": [
+      {
+        "nombrePatron": "FURUKAWA AEROCRAFT SYSTEMS MEXICO",
+        "registroPatronal": "B401678010",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "11/03/2019",
+        "fechaBaja": "27/06/2019",
+        "salarioBaseCotizacion": "$136.39",
+        "semanasLaborando": 15,
+        "salarioMensual": 4151.71
+      },
+      {
+        "nombrePatron": "ZINAPECUARO DEL SUR SA DE CV",
+        "registroPatronal": "O991116922",
+        "entidadFederativa": "MICHOACÁN DE OCAMPO",
+        "fechaAlta": "08/07/2019",
+        "fechaBaja": "30/08/2019",
+        "salarioBaseCotizacion": "$119.46",
+        "semanasLaborando": 8,
+        "salarioMensual": 3636.36
+      },
+      {
+        "nombrePatron": "SERVICIOS MEXICO S DE RL DE CV",
+        "registroPatronal": "B991646410",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "09/09/2019",
+        "fechaBaja": "17/09/2019",
+        "salarioBaseCotizacion": "$128.65",
+        "semanasLaborando": 1,
+        "salarioMensual": 3916.11
+      },
+      {
+        "nombrePatron": "FURUKAWA AEROCRAFT MEXICO",
+        "registroPatronal": "B983478010",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "18/09/2019",
+        "fechaBaja": "18/10/2019",
+        "salarioBaseCotizacion": "$130.65",
+        "semanasLaborando": 4,
+        "salarioMensual": 3976.99
+      },
+      {
+        "nombrePatron": "MATAMOROS CONFECCIONES SA DE CV",
+        "registroPatronal": "O191987910",
+        "entidadFederativa": "MICHOACÁN DE OCAMPO",
+        "fechaAlta": "04/12/2019",
+        "fechaBaja": "17/07/2020",
+        "salarioBaseCotizacion": "$136.77",
+        "semanasLaborando": 32,
+        "salarioMensual": 4163.28
+      },
+      {
+        "nombrePatron": "BIODYNAMIC SA DE CV",
+        "registroPatronal": "B842910513",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "22/03/2021",
+        "fechaBaja": "12/11/2021",
+        "salarioBaseCotizacion": "$167.43",
+        "semanasLaborando": 34,
+        "salarioMensual": 5096.57
+      },
+      {
+        "nombrePatron": "CONTROLADORA WHIRPOOL",
+        "registroPatronal": "B995878410",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "14/09/2022",
+        "fechaBaja": "07/12/2022",
+        "salarioBaseCotizacion": "$228.08",
+        "semanasLaborando": 12,
+        "salarioMensual": 6942.76
+      },
+      {
+        "nombrePatron": "NACIONAL MEXICANA",
+        "registroPatronal": "B40987210",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "06/02/2024",
+        "fechaBaja": "21/02/2024",
+        "salarioBaseCotizacion": "$263.8",
+        "semanasLaborando": 2,
+        "salarioMensual": 8030.07
+      },
+      {
+        "nombrePatron": "SERVICIO AZULES MEXICO S DE RL DE CV",
+        "registroPatronal": "B986646410",
+        "entidadFederativa": "GUANAJUATO",
+        "fechaAlta": "28/01/2025",
+        "fechaBaja": "Vigente",
+        "salarioBaseCotizacion": "$324.59",
+        "semanasLaborando": 26,
+        "salarioMensual": 9880.52
+      }
+    ],
+    "enriquecido": {
+      "situacionActual": {
+        "estatus": "empleado",
+        "salarioBaseUltimo": 324.59
+      },
+      "antiguedad": {
+        "duracionUltimoEmpleo": 26,
+        "duracionSituacionActual": 26,
+        "totalSemanasTrabajadas": 751
+      },
+      "estabilidad": {
+        "totalEmpleadoresUnicos": 22,
+        "ratioEmpleadoresPorAnio": 1.52,
+        "totalSemanasDesempleado": 453,
+        "maxDuracionDesempleo": 61
+      },
+      "salario": {
+        "modificacionesEmpleadorActual": 1,
+        "cambiosEntreEmpleadores": {
+          "progresionPositiva": 18,
+          "progresionNegativa": 12
+        },
+        "instantaneas": {
+          "hace1Ano": 23,
+          "hace3Ano": 93.9,
+          "hace5Ano": 137.3,
+          "progresionMediana": 93.9
+        }
+      }
+    },
+    "cambiosSalario": [     
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 136.39,
+        "fechaActualizacion": "2019-03-11"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 119.46,
+        "fechaActualizacion": "2019-07-08"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 128.65,
+        "fechaActualizacion": "2019-09-09"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 130.65,
+        "fechaActualizacion": "2019-09-18"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 136.77,
+        "fechaActualizacion": "2019-12-04"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 167.43,
+        "fechaActualizacion": "2021-03-22"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 228.08,
+        "fechaActualizacion": "2022-09-14"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 263.8,
+        "fechaActualizacion": "2024-02-06"
+      },
+      {
+        "evento": "CONTRATADO",
+        "salarioBase": 324.59,
+        "fechaActualizacion": "2025-01-28"
+      }
+    ]
+  },
+  "validationCode": "sse1753729562.57307481133"
+}
